@@ -1683,6 +1683,215 @@ class DisasterScreen(tk.Frame):
             )
 
 
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+
+class MainApplication(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Emergency Reporting & Alert System")
+        self.geometry("600x700")
+
+        # Container frame to hold all screens
+        container = tk.Frame(self)
+        container.pack(side="top", fill="both", expand=True)
+        container.grid_rowconfigure(0, weight=1)
+        container.grid_columnconfigure(0, weight=1)
+
+        self.frames = {}
+        for PageClass in (HomeScreen, EmergencyReportScreen):
+            page_name = PageClass.__name__
+            frame = PageClass(parent=container, controller=self)
+            self.frames[page_name] = frame
+            frame.grid(row=0, column=0, sticky="nsew")
+
+        self.show_frame("HomeScreen")
+
+    def show_frame(self, page_name):
+        frame = self.frames[page_name]
+        frame.tkraise()
+
+
+class HomeScreen(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.controller = controller
+
+        # Header Frame
+        header = tk.Frame(self, bg="#003366", height=60)
+        header.pack(fill="x", side="top")
+
+        title = tk.Label(
+            header,
+            text="Emergency Management System",
+            fg="white",
+            bg="#003366",
+            font=("Arial", 16, "bold")
+        )
+        title.pack(pady=15)
+
+        # Navigation Bar
+        navigation = tk.Frame(self, bg="#e0e0e0", height=40)
+        navigation.pack(fill="x", side="top")
+
+        report_btn = tk.Button(
+            navigation,
+            text="Report Emergency",
+            font=("Arial", 10, "bold"),
+            bg="#d9534f",
+            fg="white",
+            command=lambda: controller.show_frame("EmergencyReportScreen")
+        )
+        report_btn.pack(side="left", padx=10, pady=5)
+
+        # Main Content Frame
+        content = tk.Frame(self)
+        content.pack(fill="both", expand=True, padx=20, pady=20)
+
+        welcome_lbl = tk.Label(
+            content,
+            text="Welcome to the Portal\nClick 'Report Emergency' above to file a report.",
+            font=("Arial", 12)
+        )
+        welcome_lbl.pack(expand=True)
+
+
+class EmergencyReportScreen(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.controller = controller
+
+        # 31 Barangays of Dagupan City
+        self.barangays = [
+            "Bacayao Norte", "Bacayao Sur", "Barangay I (formerly T. Bugallon)",
+            "Barangay II (formerly Nueva)", "Barangay IV (formerly Zamora)", "Bolosan",
+            "Bonuan Binloc", "Bonuan Boquig", "Bonuan Gueset", "Calmay", "Carael",
+            "Caranglaan", "Herrero", "Lasip Chico", "Lasip Grande", "Lomboy",
+            "Lucao", "Malued", "Mamalingling", "Mangin", "Mayombo", "Pantal",
+            "Poblacion Oeste", "Pogo Chico", "Pogo Grande", "Pugaro Suit",
+            "Salapingao", "Salisay", "Tambac", "Tapuac", "Tebeng"
+        ]
+
+        # Header Frame
+        header_frame = tk.Frame(self, bg="#b30000", height=50)
+        header_frame.pack(fill="x", side="top")
+
+        header_label = tk.Label(
+            header_frame,
+            text="Emergency Report Form",
+            font=("Arial", 18, "bold"),
+            fg="white",
+            bg="#b30000"
+        )
+        header_label.pack(pady=10)
+
+        # Back Button Navigation
+        nav_bar = tk.Frame(self, bg="#f0f0f0")
+        nav_bar.pack(fill="x", side="top")
+
+        back_btn = tk.Button(
+            nav_bar,
+            text="< Back to Home",
+            font=("Arial", 10, "bold"),
+            command=lambda: controller.show_frame("HomeScreen")
+        )
+        back_btn.pack(side="left", padx=10, pady=5)
+
+        # Form Container
+        form_frame = tk.Frame(self, padx=20, pady=20)
+        form_frame.pack(fill="both", expand=True)
+
+        # -----------------------------------------------------------
+        # 1. FULL NAME (LETTERS ONLY)
+        # -----------------------------------------------------------
+        tk.Label(form_frame, text="Full Name (Letters Only):", font=("Arial", 10, "bold")).grid(row=0, column=0, sticky="w", pady=6)
+        
+        vcmd_letters = (self.register(self.validate_letters), '%P')
+        self.name_entry = tk.Entry(form_frame, validate="key", validatecommand=vcmd_letters, width=40, font=("Arial", 10))
+        self.name_entry.grid(row=0, column=1, pady=6, sticky="w")
+
+        # -----------------------------------------------------------
+        # 2. CONTACT NUMBER (NUMBERS ONLY)
+        # -----------------------------------------------------------
+        tk.Label(form_frame, text="Contact Number (Numbers Only):", font=("Arial", 10, "bold")).grid(row=1, column=0, sticky="w", pady=6)
+        
+        vcmd_numbers = (self.register(self.validate_numbers), '%P')
+        self.contact_entry = tk.Entry(form_frame, validate="key", validatecommand=vcmd_numbers, width=40, font=("Arial", 10))
+        self.contact_entry.grid(row=1, column=1, pady=6, sticky="w")
+
+        # -----------------------------------------------------------
+        # 3. SEARCHABLE LOCATION DROPDOWN (BARANGAYS)
+        # -----------------------------------------------------------
+        tk.Label(form_frame, text="Barangay (Dagupan City):", font=("Arial", 10, "bold")).grid(row=2, column=0, sticky="w", pady=6)
+        
+        self.barangay_cb = ttk.Combobox(form_frame, values=self.barangays, width=38, font=("Arial", 10))
+        self.barangay_cb.set("Type to search Barangay...")
+        self.barangay_cb.bind("", self.filter_barangays)
+        self.barangay_cb.grid(row=2, column=1, pady=6, sticky="w")
+
+        # -----------------------------------------------------------
+        # 4. SPECIFIC ADDRESS / LANDMARK DETAILS
+        # -----------------------------------------------------------
+        tk.Label(form_frame, text="Street / House No. / Landmark:", font=("Arial", 10, "bold")).grid(row=3, column=0, sticky="w", pady=6)
+        
+        self.address_entry = tk.Entry(form_frame, width=40, font=("Arial", 10))
+        self.address_entry.grid(row=3, column=1, pady=6, sticky="w")
+
+        # Submit Button
+        submit_btn = tk.Button(
+            form_frame,
+            text="Submit Report",
+            font=("Arial", 11, "bold"),
+            bg="#28a745",
+            fg="white",
+            command=self.submit_form
+        )
+        submit_btn.grid(row=4, column=1, pady=20, sticky="e")
+
+    # Input Validation: Letters and spaces only
+    def validate_letters(self, P):
+        if P == "" or all(c.isalpha() or c.isspace() for c in P):
+            return True
+        return False
+
+    # Input Validation: Numbers only (max 11 digits)
+    def validate_numbers(self, P):
+        if (P == "" or P.isdigit()) and len(P) <= 11:
+            return True
+        return False
+
+    # Live Search Filter for Combobox
+    def filter_barangays(self, event):
+        typed_text = self.barangay_cb.get().lower()
+        if typed_text == "":
+            self.barangay_cb['values'] = self.barangays
+        else:
+            filtered = [b for b in self.barangays if typed_text in b.lower()]
+            self.barangay_cb['values'] = filtered
+        
+        # Open dropdown menu automatically while typing
+        self.barangay_cb.event_generate('')
+
+    # Form Submission Handler
+    def submit_form(self):
+        name = self.name_entry.get().strip()
+        contact = self.contact_entry.get().strip()
+        barangay = self.barangay_cb.get().strip()
+        address = self.address_entry.get().strip()
+
+        if not name or not contact or barangay in ["", "Type to search Barangay..."] or not address:
+            messagebox.showwarning("Missing Fields", "Please complete all required fields.")
+            return
+
+        messagebox.showinfo("Report Submitted", f"Report successfully filed for {name} at {barangay}, {address}.")
+
+
+if __name__ == "__main__":
+    app = MainApplication()
+    app.mainloop()
+
+
 # =========================================================
 # START PROGRAM
 # =========================================================
